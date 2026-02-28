@@ -3,758 +3,615 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="WealthLens">
   <meta name="theme-color" content="#07080d">
-  <meta name="description" content="Personal multi-asset portfolio tracker in GBP">
   <title>WealthLens</title>
-
-  <!-- PWA Manifest inline -->
-  <script>
-    const manifestData = {
-      name: "WealthLens Portfolio",
-      short_name: "WealthLens",
-      description: "Multi-asset portfolio tracker in GBP",
-      start_url: ".",
-      display: "standalone",
-      background_color: "#07080d",
-      theme_color: "#07080d",
-      orientation: "any",
-      icons: [
-        { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2307080d'/><text y='.9em' font-size='80' x='10'>📈</text></svg>", sizes: "192x192", type: "image/svg+xml" }
-      ]
-    };
-    const blob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blob);
-    document.addEventListener('DOMContentLoaded', () => {
-      const link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = manifestURL;
-      document.head.appendChild(link);
-    });
-  </script>
-
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@300;400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-
-  <!-- React + Babel + Recharts from CDN -->
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.8.0/Recharts.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body { height: 100%; background: #07080d; }
-    body { font-family: 'Spline Sans Mono', 'Courier New', monospace; color: #ddd8cc; overscroll-behavior: none; }
-    #root { min-height: 100%; }
-
-    /* PWA safe areas */
-    .safe-top { padding-top: env(safe-area-inset-top); }
-    .safe-bot { padding-bottom: calc(env(safe-area-inset-bottom) + 16px); }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 3px; height: 3px; }
-    ::-webkit-scrollbar-track { background: #07080d; }
-    ::-webkit-scrollbar-thumb { background: #1e2438; border-radius: 2px; }
-
-    /* Loading screen */
-    #loader { position:fixed;inset:0;background:#07080d;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s; }
-    #loader.hide { opacity:0;pointer-events:none; }
-    .loader-brand { font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:#ddd8cc; }
-    .loader-brand em { color:#7eb8f7;font-style:normal; }
-    .loader-dot { width:6px;height:6px;background:#7eb8f7;border-radius:50%;margin-top:24px;animation:pulse 1s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:.2;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
-
-    /* Install banner */
-    .install-banner { background:#0d111c;border-bottom:1px solid #1e2438;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:11px; }
-    .install-banner button { background:#7eb8f7;color:#07080d;border:none;padding:6px 14px;font-family:'Spline Sans Mono',monospace;font-size:10px;font-weight:600;cursor:pointer;letter-spacing:1px; }
-    .install-banner .ib-close { background:transparent;color:#333;padding:6px;font-size:14px; }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:#07080d;}
+    body{font-family:'Spline Sans Mono','Courier New',monospace;color:#ddd8cc;overscroll-behavior:none;}
+    #root{min-height:100%;}
+    #loader{position:fixed;inset:0;background:#07080d;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s ease;}
+    #loader.fade{opacity:0;pointer-events:none;}
+    .lb{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;}
+    .lb em{color:#7eb8f7;font-style:normal;}
+    .ld{width:6px;height:6px;background:#7eb8f7;border-radius:50%;margin-top:20px;animation:lp 1.2s ease-in-out infinite;}
+    .le{font-size:11px;color:#f05e5e88;margin-top:16px;max-width:280px;text-align:center;line-height:1.6;display:none;}
+    @keyframes lp{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+    ::-webkit-scrollbar{width:3px;height:3px;}
+    ::-webkit-scrollbar-thumb{background:#1e2438;border-radius:2px;}
   </style>
 </head>
 <body>
-  <div id="loader">
-    <div class="loader-brand">WEALTH<em>LENS</em></div>
-    <div class="loader-dot"></div>
-  </div>
-  <div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useCallback, useRef } = React;
-    const { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine } = Recharts;
+<div id="loader">
+  <div class="lb">WEALTH<em>LENS</em></div>
+  <div class="ld" id="ldot"></div>
+  <div class="le" id="lerr"></div>
+</div>
+<div id="root"></div>
 
-    // Hide loader once app mounts
-    window.__hideLoader = () => {
-      const l = document.getElementById('loader');
-      if (l) { l.classList.add('hide'); setTimeout(() => l.remove(), 500); }
+<!-- Load order matters: React → PropTypes → Recharts → htm → app -->
+<script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://unpkg.com/recharts@2.10.4/umd/Recharts.js"></script>
+<script src="https://unpkg.com/htm@3.1.1/dist/htm.js"></script>
+
+<script>
+// If any script above failed, show error after 8s
+const loaderTimeout = setTimeout(() => {
+  const el = document.getElementById('lerr');
+  if (el && document.getElementById('loader') && !document.getElementById('loader').classList.contains('fade')) {
+    el.style.display = 'block';
+    el.textContent = 'Failed to load scripts. Check your internet connection and refresh.';
+    document.getElementById('ldot').style.display = 'none';
+  }
+}, 8000);
+
+function hideLoader() {
+  clearTimeout(loaderTimeout);
+  const l = document.getElementById('loader');
+  if (!l) return;
+  l.classList.add('fade');
+  setTimeout(() => l.remove(), 600);
+}
+
+// Bootstrap app once DOM + scripts ready
+window.addEventListener('load', function() {
+  try {
+    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') throw new Error('React not loaded');
+    if (typeof Recharts === 'undefined') throw new Error('Recharts not loaded');
+    if (typeof htm === 'undefined') throw new Error('htm not loaded');
+    initApp();
+  } catch(e) {
+    const el = document.getElementById('lerr');
+    if (el) { el.style.display = 'block'; el.textContent = 'Load error: ' + e.message + '. Try refreshing.'; }
+    document.getElementById('ldot').style.display = 'none';
+  }
+});
+
+function initApp() {
+  const { useState, useEffect, useCallback, useRef } = React;
+  const { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } = Recharts;
+  const html = htm.bind(React.createElement);
+
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const SK = 'wl-h-v3', HK = 'wl-hist-v3', AK = 'wl-key-v1';
+  const PALETTE = ['#7eb8f7','#5dde8a','#f7c97e','#b87ef7','#f05e5e','#7ef7e8','#f7a87e','#c8f53a'];
+  const MONTHS = ['Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb'];
+  const TYPES = [{v:'stock',l:'Stock'},{v:'etf_us',l:'US ETF'},{v:'etf_uk',l:'UK Fund'},{v:'crypto',l:'Crypto'}];
+
+  const fmt = v => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:2}).format(v||0);
+  const fmtS = v => { const a=Math.abs(v||0); if(a>=1e6) return `£${(v/1e6).toFixed(2)}m`; if(a>=1000) return `£${(v/1000).toFixed(1)}k`; return fmt(v); };
+  const fmtP = v => `${v>=0?'+':''}${(v||0).toFixed(2)}%`;
+  const fmtN = v => new Intl.NumberFormat('en-GB',{maximumFractionDigits:4}).format(v||0);
+  const ls = (k,d) => { try { return JSON.parse(localStorage.getItem(k))||d; } catch { return d; } };
+  const ss = (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  async function claude(apiKey, system, user, maxTok=1000) {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTok,system,messages:[{role:'user',content:user}]})
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message);
+    return (d.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim();
+  }
+
+  const PRICE_SYS = `Return ONLY a JSON object with GBP prices. Stocks/US ETFs: convert from USD * 0.79. UK Funds by ISIN: GBP (convert pence to pounds). Crypto: GBP. Format: {"ID":{"price":123.45,"name":"Short Name"}} No other text.`;
+  const HIST_SYS = `Generate simulated 12-month monthly GBP price history. Crypto=high volatility, equities=medium, bonds=low. Last value must equal current price. Return ONLY JSON: {"ID":[p1,...,p12]} exactly 12 values. No other text.`;
+  const ISIN_SYS = `Return ONLY JSON: {"name":"Full Name","shortName":"Short","type":"etf_uk","description":"One sentence","provider":"Provider name"} No other text.`;
+
+  // ── API Key Screen ─────────────────────────────────────────────────────────
+  function ApiKeyScreen({ onSave }) {
+    const [key, setKey] = useState('');
+    const [err, setErr] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const test = async () => {
+      if (!key.trim()) return;
+      setBusy(true); setErr('');
+      try {
+        await claude(key.trim(), 'Reply with: ok', 'ping', 5);
+        onSave(key.trim());
+      } catch(e) {
+        setErr('Invalid key or network error. Check and try again.');
+      }
+      setBusy(false);
     };
 
-    const STORAGE_KEY = "wl-holdings-v1";
-    const HIST_KEY = "wl-history-v1";
-    const API_KEY_KEY = "wl-apikey";
-
-    const fmt = v => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP",maximumFractionDigits:2}).format(v);
-    const fmtPct = v => `${v>=0?"+":""}${v.toFixed(2)}%`;
-    const fmtNum = v => new Intl.NumberFormat("en-GB",{maximumFractionDigits:4}).format(v);
-    const fmtShort = v => {
-      if(Math.abs(v)>=1000000) return `£${(v/1000000).toFixed(2)}m`;
-      if(Math.abs(v)>=1000) return `£${(v/1000).toFixed(1)}k`;
-      return fmt(v);
-    };
-
-    const ASSET_TYPES = [
-      {value:"stock",label:"Stock"},
-      {value:"etf_us",label:"US ETF"},
-      {value:"etf_uk",label:"UK Fund (ISIN)"},
-      {value:"crypto",label:"Crypto"},
-    ];
-    const PALETTE = ["#7eb8f7","#5dde8a","#f7c97e","#b87ef7","#f05e5e","#7ef7e8","#f7a87e","#c8f53a","#f77eb8","#a8f77e"];
-    const MONTHS = ["Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb"];
-
-    const PRICE_SYS = `You are a financial data assistant. Return ONLY a valid JSON object with current approximate prices in GBP. Stocks/US ETFs: convert from USD using ~0.79. UK Funds by ISIN: price in GBP (convert pence to pounds if needed). Crypto: in GBP. Format: {"IDENTIFIER":{"price":123.45,"name":"Short Name"}} Only return JSON.`;
-    const HIST_SYS = `Generate realistic simulated 12-month monthly price history in GBP. Use realistic volatility (crypto high, equities medium, bonds low). Last value must equal current price. Return ONLY JSON: {"IDENTIFIER":[p1,...,p12]} exactly 12 values per asset. Only return JSON.`;
-
-    async function callClaude(apiKey, system, userMsg, maxTokens=1000) {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:maxTokens,system,messages:[{role:"user",content:userMsg}]})
-      });
-      const data = await res.json();
-      if(data.error) throw new Error(data.error.message);
-      return data.content?.[0]?.text || "{}";
-    }
-
-    // ── API Key Gate ──────────────────────────────────────────────────────────
-    function ApiKeyScreen({onSave}) {
-      const [key, setKey] = useState("");
-      const [err, setErr] = useState("");
-      const [testing, setTesting] = useState(false);
-
-      const test = async () => {
-        if(!key.trim().startsWith("sk-")) { setErr("Key should start with sk-ant- or sk-"); return; }
-        setTesting(true); setErr("");
-        try {
-          await callClaude(key.trim(), "Reply only with: ok", "ping", 10);
-          onSave(key.trim());
-        } catch(e) {
-          setErr("Invalid key or network error: " + e.message);
-        }
-        setTesting(false);
-      };
-
-      return (
-        <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"32px 20px",background:"#07080d"}}>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:"28px",fontWeight:900,marginBottom:6}}>WEALTH<em style={{color:"#7eb8f7",fontStyle:"normal"}}>LENS</em></div>
-          <div style={{fontSize:"9px",letterSpacing:"2.5px",color:"#282e3a",textTransform:"uppercase",marginBottom:40}}>Multi-Asset Portfolio Tracker</div>
-
-          <div style={{width:"100%",maxWidth:380,background:"#0d111c",border:"1px solid #1e2438",padding:28}}>
-            <div style={{fontSize:"11px",color:"#444",lineHeight:1.7,marginBottom:20}}>
-              Enter your Anthropic API key to power price lookups and charts. Your key is stored locally on this device only.
-            </div>
-            <div style={{fontSize:"9px",letterSpacing:"2px",color:"#282e3a",textTransform:"uppercase",marginBottom:7}}>Anthropic API Key</div>
-            <input
-              type="password"
-              placeholder="sk-ant-..."
-              value={key}
-              onChange={e=>setKey(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&test()}
-              style={{width:"100%",background:"#07080d",border:"1px solid #151b25",color:"#ddd8cc",padding:"11px 13px",fontFamily:"'Spline Sans Mono',monospace",fontSize:13,outline:"none",marginBottom:8}}
-            />
-            {err && <div style={{fontSize:"10px",color:"#f05e5e88",marginBottom:10}}>⚠ {err}</div>}
-            <button onClick={test} disabled={testing||!key.trim()} style={{width:"100%",background:"#7eb8f7",color:"#07080d",border:"none",padding:"12px",fontFamily:"'Spline Sans Mono',monospace",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:"1px",opacity:testing||!key.trim()?0.5:1}}>
-              {testing ? "TESTING..." : "CONNECT & START"}
-            </button>
-            <div style={{fontSize:"9px",color:"#1e2430",marginTop:14,lineHeight:1.6}}>
-              Get a key at console.anthropic.com · Your key never leaves this device
-            </div>
+    return html`
+      <div style=${{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'32px 20px',background:'#07080d'}}>
+        <div style=${{fontFamily:"'Playfair Display',serif",fontSize:28,fontWeight:900,marginBottom:6}}>WEALTH<em style=${{color:'#7eb8f7',fontStyle:'normal'}}>LENS</em></div>
+        <div style=${{fontSize:9,letterSpacing:'2.5px',color:'#282e3a',textTransform:'uppercase',marginBottom:40}}>Multi-Asset Portfolio · GBP</div>
+        <div style=${{width:'100%',maxWidth:360,background:'#0d111c',border:'1px solid #1e2438',padding:28}}>
+          <div style=${{fontSize:11,color:'#444',lineHeight:1.8,marginBottom:20}}>
+            Enter your Anthropic API key to enable price lookups. Your key is stored only on this device.
           </div>
-        </div>
-      );
-    }
-
-    // ── Custom Tooltip ────────────────────────────────────────────────────────
-    function ChartTooltip({active,payload,label}) {
-      if(!active||!payload?.length) return null;
-      return (
-        <div style={{background:"#0d111c",border:"1px solid #1e2438",padding:"10px 14px",fontSize:10}}>
-          <div style={{color:"#555",marginBottom:5,letterSpacing:1}}>{label}</div>
-          {payload.map((p,i)=>(
-            <div key={i} style={{color:p.color,marginBottom:2}}>
-              <span style={{marginRight:8}}>{p.name}</span>
-              <span style={{color:"#ddd8cc"}}>{fmt(p.value)}</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    // ── Main App ──────────────────────────────────────────────────────────────
-    function App() {
-      const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_KEY) || "");
-      const [holdings, setHoldings] = useState(() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]; } catch { return []; }});
-      const [prices, setPrices] = useState({});
-      const [history, setHistory] = useState(() => { try { return JSON.parse(localStorage.getItem(HIST_KEY))||{}; } catch { return {}; }});
-      const [loading, setLoading] = useState(false);
-      const [histLoading, setHistLoading] = useState(false);
-      const [lastUpdated, setLastUpdated] = useState(null);
-      const [error, setError] = useState("");
-      const [tab, setTab] = useState("all");
-      const [chartView, setChartView] = useState("portfolio");
-      const [showAdd, setShowAdd] = useState(false);
-      const [form, setForm] = useState({identifier:"",type:"stock",shares:"",buyPrice:"",name:""});
-      const [editId, setEditId] = useState(null);
-      const [isinLookup, setIsinLookup] = useState({loading:false,result:null,error:""});
-      const [deleteConfirm, setDeleteConfirm] = useState(null);
-      const [showSettings, setShowSettings] = useState(false);
-      const [installPrompt, setInstallPrompt] = useState(null);
-      const [showInstall, setShowInstall] = useState(false);
-
-      // PWA install prompt
-      useEffect(()=>{
-        window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); setInstallPrompt(e); setShowInstall(true); });
-      },[]);
-
-      useEffect(()=>{ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings)); } catch {} },[holdings]);
-      useEffect(()=>{ try { localStorage.setItem(HIST_KEY, JSON.stringify(history)); } catch {} },[history]);
-
-      // Hide loader
-      useEffect(()=>{ setTimeout(window.__hideLoader, 300); },[]);
-
-      const saveApiKey = (k) => { localStorage.setItem(API_KEY_KEY, k); setApiKey(k); };
-      const clearApiKey = () => { localStorage.removeItem(API_KEY_KEY); setApiKey(""); };
-
-      const fetchPrices = useCallback(async (h) => {
-        const hs = h ?? holdings;
-        if(!hs.length) return;
-        setLoading(true); setError("");
-        const assets = hs.map(x=>`${x.identifier} (${x.type}${x.name?`, name:"${x.name}"`:""})`).join(", ");
-        try {
-          const text = await callClaude(apiKey, PRICE_SYS, `Get GBP prices for: ${assets}`);
-          const newPrices = JSON.parse(text.replace(/```json|```/g,"").trim());
-          setPrices(newPrices);
-          setLastUpdated(new Date());
-          fetchHistory(hs, newPrices);
-        } catch(e) {
-          setError("Could not fetch prices: " + e.message);
-        }
-        setLoading(false);
-      }, [apiKey, holdings]);
-
-      const fetchHistory = async (hs, priceData) => {
-        if(!hs?.length) return;
-        setHistLoading(true);
-        const list = hs.map(x => { const p = priceData[x.identifier]?.price; return p ? `${x.identifier} current £${p}` : x.identifier; }).join(", ");
-        try {
-          const text = await callClaude(apiKey, HIST_SYS, `Generate 12-month history for: ${list}`, 2000);
-          setHistory(JSON.parse(text.replace(/```json|```/g,"").trim()));
-        } catch {}
-        setHistLoading(false);
-      };
-
-      useEffect(()=>{ if(holdings.length>0 && apiKey) fetchPrices(holdings); },[]);
-
-      const lookupISIN = async (isin) => {
-        if(!isin || isin.length<10) return;
-        setIsinLookup({loading:true,result:null,error:""});
-        try {
-          const text = await callClaude(apiKey, `Return ONLY JSON: {"name":"Full Name","shortName":"Short","type":"etf_uk|etf_us|stock|crypto","description":"One sentence","provider":"Provider"}`, `Look up ISIN: ${isin}`, 300);
-          const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
-          setIsinLookup({loading:false,result:parsed,error:""});
-          setForm(f=>({...f, name:parsed.shortName||parsed.name||"", type:parsed.type||"etf_uk"}));
-        } catch {
-          setIsinLookup({loading:false,result:null,error:"Could not look up ISIN."});
-        }
-      };
-
-      const addOrUpdate = () => {
-        if(!form.identifier||!form.shares||!form.buyPrice) return;
-        const entry = {id:editId||Date.now(), identifier:form.identifier.trim().toUpperCase(), type:form.type, name:form.name.trim(), shares:parseFloat(form.shares), buyPrice:parseFloat(form.buyPrice)};
-        const updated = editId ? holdings.map(h=>h.id===editId?entry:h) : [...holdings,entry];
-        setHoldings(updated);
-        cancelForm();
-        setTimeout(()=>fetchPrices(updated),200);
-      };
-
-      const cancelForm = () => { setForm({identifier:"",type:"stock",shares:"",buyPrice:"",name:""}); setShowAdd(false); setEditId(null); setIsinLookup({loading:false,result:null,error:""}); };
-      const startEdit = h => { setForm({identifier:h.identifier,type:h.type,shares:String(h.shares),buyPrice:String(h.buyPrice),name:h.name||""}); setEditId(h.id); setShowAdd(true); window.scrollTo({top:0,behavior:"smooth"}); };
-      const doDelete = () => { if(!deleteConfirm) return; const updated=holdings.filter(h=>h.id!==deleteConfirm.id); setHoldings(updated); setHistory(p=>{const n={...p};delete n[deleteConfirm.identifier];return n;}); if(chartView===String(deleteConfirm.id)) setChartView("portfolio"); setDeleteConfirm(null); };
-
-      // Enrich
-      const enriched = holdings.map(h => {
-        const pd = prices[h.identifier];
-        const currentPrice = pd?.price??null;
-        const resolvedName = pd?.name||h.name||h.identifier;
-        const costBasis = h.shares*h.buyPrice;
-        const currentValue = currentPrice!==null ? h.shares*currentPrice : null;
-        const gain = currentValue!==null ? currentValue-costBasis : null;
-        const gainPct = gain!==null&&costBasis>0 ? (gain/costBasis)*100 : null;
-        return {...h,currentPrice,resolvedName,costBasis,currentValue,gain,gainPct};
-      });
-
-      const filtered = tab==="all" ? enriched : enriched.filter(h=>h.type===tab);
-      const totalCost = enriched.reduce((s,h)=>s+h.costBasis,0);
-      const totalValue = enriched.reduce((s,h)=>s+(h.currentValue??h.costBasis),0);
-      const totalGain = enriched.reduce((s,h)=>s+(h.gain??0),0);
-      const totalGainPct = totalCost>0 ? (totalGain/totalCost)*100 : 0;
-      const winners = enriched.filter(h=>(h.gainPct??0)>=0).length;
-      const losers = enriched.filter(h=>(h.gainPct??0)<0).length;
-      const typeLabel = t => ASSET_TYPES.find(a=>a.value===t)?.label||t;
-      const identifierHint = form.type==="etf_uk"?"ISIN e.g. GB00BQFH5Y69":form.type==="crypto"?"e.g. BTC, ETH":form.type==="etf_us"?"e.g. VOO, QQQ":"e.g. AAPL, TSLA";
-
-      // Chart data
-      const chartData = MONTHS.map((m,i)=>{
-        const point = {month:m};
-        let tot = 0;
-        enriched.forEach(h=>{
-          const hist = history[h.identifier];
-          const val = hist&&hist.length>=12 ? h.shares*hist[i] : h.costBasis;
-          point[h.identifier] = parseFloat(val.toFixed(2));
-          tot += val;
-        });
-        point.Portfolio = parseFloat(tot.toFixed(2));
-        return point;
-      });
-      const selectedH = chartView!=="portfolio" ? enriched.find(h=>String(h.id)===chartView) : null;
-
-      if(!apiKey) return <ApiKeyScreen onSave={saveApiKey}/>;
-
-      return (
-        <div style={{minHeight:"100vh",background:"#07080d",paddingBottom:80}}>
-          <style>{`
-            .hdr{background:#07080d;border-bottom:1px solid #111620;padding:16px 20px;padding-top:calc(16px + env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);}
-            .brand{font-family:'Playfair Display',serif;font-size:20px;font-weight:900;letter-spacing:-.5px;}
-            .brand em{color:#7eb8f7;font-style:normal;}
-            .tag{font-size:8px;color:#282e3a;letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
-            .hdr-btns{display:flex;gap:8px;align-items:center;}
-
-            /* Summary cards */
-            .cards{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#0f1018;border-bottom:1px solid #0f1018;}
-            .card{background:#07080d;padding:18px 16px;}
-            .card-full{grid-column:1/-1;}
-            .cl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#282e3a;margin-bottom:6px;}
-            .cv{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;letter-spacing:-1px;line-height:1;}
-            .cs{font-size:10px;margin-top:4px;color:#333;}
-            .pos{color:#5dde8a;}.neg{color:#f05e5e;}.blue{color:#7eb8f7;}
-
-            /* Chart */
-            .chart-wrap{background:#0b0d15;border-bottom:1px solid #111620;padding:16px 8px 8px;}
-            .chart-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:0 8px;}
-            .chart-label{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#282e3a;}
-            .ctabs{display:flex;gap:2px;overflow-x:auto;padding-bottom:2px;-ms-overflow-style:none;scrollbar-width:none;}
-            .ctabs::-webkit-scrollbar{display:none;}
-            .ctab{background:transparent;border:1px solid #111620;color:#333;padding:5px 10px;font-family:'Spline Sans Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;white-space:nowrap;flex-shrink:0;}
-            .ctab.on{color:#ddd8cc;border-color:#1e2438;background:#151820;}
-
-            /* Holdings list */
-            .section{padding:16px 16px 0;}
-            .section-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-            .sec-label{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#282e3a;}
-            .filter-tabs{display:flex;gap:2px;overflow-x:auto;padding-bottom:0;-ms-overflow-style:none;scrollbar-width:none;}
-            .filter-tabs::-webkit-scrollbar{display:none;}
-            .ftab{background:transparent;border:1px solid #111620;color:#333;padding:5px 10px;font-family:'Spline Sans Mono',monospace;font-size:9px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
-            .ftab.on{background:#111620;color:#ddd8cc;border-color:#1e2438;}
-
-            /* Holding card */
-            .hcard{background:#0b0d15;border:1px solid #111620;margin-bottom:8px;overflow:hidden;}
-            .hcard-top{padding:14px 14px 10px;display:flex;justify-content:space-between;align-items:flex-start;}
-            .hcard-name{font-weight:500;color:#e8e4d9;font-size:13px;}
-            .hcard-id{font-size:9px;color:#282e3a;margin-top:2px;letter-spacing:.5px;}
-            .hcard-val{text-align:right;}
-            .hcard-price{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;}
-            .hcard-gain{font-size:10px;margin-top:2px;}
-            .hcard-grid{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #111620;}
-            .hcell{padding:8px 14px;border-right:1px solid #111620;}
-            .hcell:last-child{border-right:none;}
-            .hcl{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:#1e2430;margin-bottom:3px;}
-            .hcv{font-size:11px;color:#ddd8cc;}
-            .hcard-actions{display:flex;border-top:1px solid #111620;}
-            .hact{flex:1;background:transparent;border:none;border-right:1px solid #111620;padding:10px;font-family:'Spline Sans Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:1px;color:#444;transition:all .15s;}
-            .hact:last-child{border-right:none;}
-            .hact:hover{background:#111620;color:#888;}
-            .hact.del{color:#f05e5e44;}
-            .hact.del:hover{background:#f05e5e0d;color:#f05e5e;}
-
-            /* Badge */
-            .bdg{display:inline-block;padding:2px 7px;font-size:8px;letter-spacing:1px;text-transform:uppercase;border:1px solid;}
-            .bdg-stock{color:#7eb8f7;border-color:#7eb8f725;background:#7eb8f70d;}
-            .bdg-etf_us{color:#b87ef7;border-color:#b87ef725;background:#b87ef70d;}
-            .bdg-etf_uk{color:#f7c97e;border-color:#f7c97e25;background:#f7c97e0d;}
-            .bdg-crypto{color:#7ef7c9;border-color:#7ef7c925;background:#7ef7c90d;}
-            .pil{display:inline-block;padding:2px 7px;font-size:10px;}
-            .pil-p{background:#5dde8a15;color:#5dde8a;border:1px solid #5dde8a28;}
-            .pil-n{background:#f05e5e15;color:#f05e5e;border:1px solid #f05e5e28;}
-
-            /* FAB */
-            .fab{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));right:20px;width:56px;height:56px;border-radius:50%;background:#7eb8f7;color:#07080d;border:none;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px #7eb8f740;z-index:200;transition:all .2s;}
-            .fab:hover{background:#9fcbff;transform:scale(1.05);}
-            .fab.open{transform:rotate(45deg);background:#f05e5e;box-shadow:0 4px 20px #f05e5e40;}
-
-            /* Sheet */
-            .sheet-overlay{position:fixed;inset:0;background:#00000088;z-index:300;animation:fdo .2s ease;}
-            @keyframes fdo{from{opacity:0}to{opacity:1}}
-            .sheet{position:fixed;bottom:0;left:0;right:0;background:#0d111c;border-top:1px solid #1e2438;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;z-index:400;animation:slideUp .25s ease;}
-            @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-            .sheet-handle{width:40px;height:4px;background:#1e2438;border-radius:2px;margin:0 auto 20px;}
-            .sheet-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:20px;}
-            .fg{display:flex;flex-direction:column;gap:7px;margin-bottom:14px;}
-            .fl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#282e3a;}
-            .fi{background:#07080d;border:1px solid #151b25;color:#ddd8cc;padding:13px 14px;font-family:'Spline Sans Mono',monospace;font-size:14px;outline:none;transition:border-color .15s;width:100%;border-radius:2px;}
-            .fi:focus{border-color:#7eb8f740;}
-            .fi::placeholder{color:#1e2430;}
-            select.fi{cursor:pointer;appearance:none;}
-            .isin-result{margin-top:8px;background:#07080d;border:1px solid #1e2438;border-left:2px solid #7eb8f7;padding:10px 14px;animation:fdo .2s ease;}
-            .lookup-row{display:flex;gap:8px;}
-            .btn-lookup{background:#1e2438;border:1px solid #2a3050;color:#7eb8f7;padding:0 16px;font-family:'Spline Sans Mono',monospace;font-size:10px;font-weight:600;cursor:pointer;letter-spacing:1px;flex-shrink:0;border-radius:2px;}
-            .btn-lookup:disabled{opacity:.35;cursor:not-allowed;}
-            .btn-full{width:100%;background:#7eb8f7;color:#07080d;border:none;padding:14px;font-family:'Spline Sans Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:1px;margin-top:4px;}
-            .btn-ghost{width:100%;background:transparent;border:1px solid #1e2438;color:#555;padding:12px;font-family:'Spline Sans Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px;margin-top:8px;}
-
-            /* Delete modal */
-            .modal-overlay{position:fixed;inset:0;background:#00000099;z-index:500;display:flex;align-items:flex-end;justify-content:center;animation:fdo .15s ease;}
-            .modal{background:#0d111c;border:1px solid #1e2438;border-radius:16px 16px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:500px;animation:slideUp .2s ease;}
-            .modal-title{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:8px;}
-            .modal-sub{font-size:11px;color:#444;line-height:1.7;margin-bottom:20px;}
-            .btn-del{width:100%;background:#f05e5e;color:#fff;border:none;padding:14px;font-family:'Spline Sans Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:1px;border-radius:2px;}
-            .btn-cancel{width:100%;background:transparent;border:1px solid #1e2438;color:#555;padding:12px;font-family:'Spline Sans Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px;margin-top:8px;border-radius:2px;}
-
-            /* Settings */
-            .settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #111620;}
-            .settings-label{font-size:12px;color:#888;}
-            .settings-val{font-size:10px;color:#333;margin-top:2px;}
-
-            .spin{animation:sp 1s linear infinite;display:inline-block;}
-            @keyframes sp{to{transform:rotate(360deg)}}
-            .err-bar{background:#f05e5e0a;border:1px solid #f05e5e20;color:#f05e5e77;padding:10px 16px;font-size:10px;margin:0 16px 12px;letter-spacing:.5px;}
-
-            .empty{text-align:center;padding:60px 20px;color:#1e2430;}
-            .empty-h{font-family:'Playfair Display',serif;font-size:20px;color:#1a1f2a;margin-bottom:6px;}
-            .ts{font-size:9px;color:#1e2430;letter-spacing:1px;}
-
-            .btn-icon{background:transparent;border:1px solid #151b25;color:#444;padding:8px 12px;font-family:'Spline Sans Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s;}
-            .btn-icon:hover{color:#888;border-color:#2a3040;}
-            .btn-icon:disabled{opacity:.3;cursor:not-allowed;}
-          `}</style>
-
-          {/* Install Banner */}
-          {showInstall && (
-            <div className="install-banner">
-              <span style={{color:"#888"}}>📱 Add WealthLens to your home screen</span>
-              <div style={{display:"flex",gap:6}}>
-                <button onClick={()=>{installPrompt?.prompt();setShowInstall(false);}}>INSTALL</button>
-                <button className="ib-close" onClick={()=>setShowInstall(false)}>✕</button>
-              </div>
-            </div>
-          )}
-
-          {/* Header */}
-          <div className="hdr">
-            <div>
-              <div className="brand">WEALTH<em>LENS</em></div>
-              {lastUpdated && <div className="ts">Updated {lastUpdated.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</div>}
-            </div>
-            <div className="hdr-btns">
-              <button className="btn-icon" onClick={()=>fetchPrices()} disabled={loading||!holdings.length} title="Refresh prices">
-                {loading ? <span className="spin">↻</span> : "↻"}
-              </button>
-              <button className="btn-icon" onClick={()=>setShowSettings(true)} title="Settings">⚙</button>
-            </div>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="cards">
-            <div className="card card-full">
-              <div className="cl">Portfolio Value</div>
-              <div className="cv blue">{fmt(totalValue)}</div>
-              <div className="cs">{holdings.length} position{holdings.length!==1?"s":""}</div>
-            </div>
-            <div className="card">
-              <div className="cl">Total Invested</div>
-              <div className="cv" style={{fontSize:18}}>{fmtShort(totalCost)}</div>
-              <div className="cs">cost basis</div>
-            </div>
-            <div className="card">
-              <div className="cl">Total Return</div>
-              <div className={`cv ${totalGain>=0?"pos":"neg"}`} style={{fontSize:18}}>{totalGain>=0?"+":""}{fmtShort(totalGain)}</div>
-              <div className={`cs ${totalGainPct>=0?"pos":"neg"}`}>{fmtPct(totalGainPct)}</div>
-            </div>
-            <div className="card">
-              <div className="cl">Winners</div>
-              <div className="cv pos" style={{fontSize:18}}>{winners}</div>
-              <div className="cs pos">of {holdings.length} positions</div>
-            </div>
-            <div className="card">
-              <div className="cl">Losers</div>
-              <div className="cv neg" style={{fontSize:18}}>{losers}</div>
-              <div className="cs neg">positions down</div>
-            </div>
-          </div>
-
-          {/* Chart */}
-          {holdings.length>0 && (
-            <div className="chart-wrap">
-              <div className="chart-hdr">
-                <div className="chart-label">{histLoading ? <span><span className="spin">↻</span> Loading chart...</span> : "12-MONTH PERFORMANCE"}</div>
-              </div>
-              <div className="ctabs" style={{padding:"0 8px",marginBottom:10}}>
-                <button className={`ctab ${chartView==="portfolio"?"on":""}`} onClick={()=>setChartView("portfolio")}>PORTFOLIO</button>
-                {enriched.map((h,i)=>(
-                  <button key={h.id} className={`ctab ${chartView===String(h.id)?"on":""}`}
-                    onClick={()=>setChartView(String(h.id))}
-                    style={chartView===String(h.id)?{borderColor:PALETTE[i%PALETTE.length]+"66",color:PALETTE[i%PALETTE.length]}:{}}>
-                    {h.identifier}
-                  </button>
-                ))}
-              </div>
-              {chartData.length>0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  {chartView==="portfolio" ? (
-                    <LineChart data={chartData} margin={{top:5,right:10,left:0,bottom:5}}>
-                      <XAxis dataKey="month" tick={{fill:"#282e3a",fontSize:9,fontFamily:"'Spline Sans Mono',monospace"}} axisLine={false} tickLine={false}/>
-                      <YAxis tick={{fill:"#282e3a",fontSize:9,fontFamily:"'Spline Sans Mono',monospace"}} axisLine={false} tickLine={false} tickFormatter={v=>`£${(v/1000).toFixed(0)}k`} width={40}/>
-                      <Tooltip content={<ChartTooltip/>}/>
-                      {enriched.map((h,i)=>(
-                        <Line key={h.identifier} type="monotone" dataKey={h.identifier} name={h.resolvedName} stroke={PALETTE[i%PALETTE.length]} strokeWidth={1.5} dot={false} strokeOpacity={0.5}/>
-                      ))}
-                      <Line type="monotone" dataKey="Portfolio" name="Total" stroke="#7eb8f7" strokeWidth={2.5} dot={false}/>
-                    </LineChart>
-                  ) : selectedH ? (
-                    <LineChart data={chartData} margin={{top:5,right:10,left:0,bottom:5}}>
-                      <XAxis dataKey="month" tick={{fill:"#282e3a",fontSize:9,fontFamily:"'Spline Sans Mono',monospace"}} axisLine={false} tickLine={false}/>
-                      <YAxis tick={{fill:"#282e3a",fontSize:9,fontFamily:"'Spline Sans Mono',monospace"}} axisLine={false} tickLine={false} tickFormatter={v=>fmtShort(v)} width={52}/>
-                      <Tooltip content={<ChartTooltip/>}/>
-                      <ReferenceLine y={selectedH.costBasis} stroke="#f7c97e" strokeDasharray="4 4" strokeOpacity={0.4}/>
-                      <Line type="monotone" dataKey={selectedH.identifier} name={selectedH.resolvedName} stroke={PALETTE[enriched.findIndex(h=>h.id===selectedH.id)%PALETTE.length]} strokeWidth={2} dot={false}/>
-                    </LineChart>
-                  ) : <LineChart data={[]}><XAxis/></LineChart>}
-                </ResponsiveContainer>
-              ) : (
-                <div style={{height:220,display:"flex",alignItems:"center",justifyContent:"center",color:"#1e2430",fontSize:10,letterSpacing:1}}>
-                  REFRESH TO LOAD CHART DATA
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Holdings */}
-          <div className="section">
-            {error && <div className="err-bar" style={{margin:"0 0 12px"}}>⚠ {error}</div>}
-
-            <div style={{display:"flex",gap:6,marginBottom:12,overflowX:"auto",paddingBottom:2}}>
-              {[{v:"all",l:"All"},{v:"stock",l:"Stocks"},{v:"etf_us",l:"US ETFs"},{v:"etf_uk",l:"UK Funds"},{v:"crypto",l:"Crypto"}].map(t=>(
-                <button key={t.v} className={`ftab ${tab===t.v?"on":""}`} onClick={()=>setTab(t.v)}>{t.l}</button>
-              ))}
-            </div>
-
-            {holdings.length===0 ? (
-              <div className="empty">
-                <div className="empty-h">No holdings yet</div>
-                <div style={{fontSize:10,letterSpacing:1}}>TAP + TO ADD YOUR FIRST POSITION</div>
-              </div>
-            ) : filtered.length===0 ? (
-              <div className="empty"><div style={{fontSize:10,letterSpacing:1}}>NO {tab.toUpperCase()} HOLDINGS</div></div>
-            ) : (
-              filtered.map((h,i)=>{
-                const color = PALETTE[enriched.findIndex(e=>e.id===h.id)%PALETTE.length];
-                const weight = totalValue>0 ? ((h.currentValue??h.costBasis)/totalValue)*100 : 0;
-                return (
-                  <div key={h.id} className="hcard" style={{borderLeftColor:color,borderLeftWidth:3}}>
-                    <div className="hcard-top">
-                      <div>
-                        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4}}>
-                          <span className={`bdg bdg-${h.type}`}>{typeLabel(h.type)}</span>
-                          <span style={{fontSize:9,color:"#282e3a",letterSpacing:1}}>{weight.toFixed(1)}%</span>
-                        </div>
-                        <div className="hcard-name">{h.resolvedName}</div>
-                        {h.resolvedName!==h.identifier && <div className="hcard-id">{h.identifier}</div>}
-                      </div>
-                      <div className="hcard-val">
-                        <div className="hcard-price" style={{color:h.currentValue!==null?"#ddd8cc":"#333"}}>
-                          {h.currentValue!==null ? fmtShort(h.currentValue) : fmtShort(h.costBasis)}
-                        </div>
-                        <div className="hcard-gain">
-                          {h.gainPct!==null
-                            ? <span className={`pil ${h.gainPct>=0?"pil-p":"pil-n"}`}>{fmtPct(h.gainPct)}</span>
-                            : <span style={{color:"#282e3a",fontSize:9}}>no price</span>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="hcard-grid">
-                      <div className="hcell">
-                        <div className="hcl">Units</div>
-                        <div className="hcv">{fmtNum(h.shares)}</div>
-                      </div>
-                      <div className="hcell">
-                        <div className="hcl">Buy Price</div>
-                        <div className="hcv">{fmt(h.buyPrice)}</div>
-                      </div>
-                      <div className="hcell">
-                        <div className="hcl">P&amp;L</div>
-                        <div className={`hcv ${(h.gain??0)>=0?"pos":"neg"}`}>
-                          {h.gain!==null ? `${h.gain>=0?"+":""}${fmtShort(h.gain)}` : "—"}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="hcard-actions">
-                      <button className="hact" onClick={()=>{setChartView(String(h.id));window.scrollTo({top:document.querySelector('.chart-wrap')?.offsetTop-60,behavior:'smooth'});}}>chart</button>
-                      <button className="hact" onClick={()=>startEdit(h)}>edit</button>
-                      <button className="hact del" onClick={()=>setDeleteConfirm(h)}>delete</button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Disclaimer */}
-          {holdings.length>0 && (
-            <div style={{padding:"20px 16px 0",fontSize:9,color:"#1a1f2a",lineHeight:1.7}}>
-              Prices and chart data are AI-estimated approximations. Chart history is simulated and does not reflect actual past performance. For personal tracking only — not financial advice.
-            </div>
-          )}
-
-          {/* FAB */}
-          <button className={`fab ${showAdd?"open":""}`} onClick={()=>{if(showAdd){cancelForm();}else{setShowAdd(true);}}}>
-            +
+          <div style=${{fontSize:9,letterSpacing:'2px',color:'#282e3a',textTransform:'uppercase',marginBottom:7}}>API Key</div>
+          <input type="password" placeholder="sk-ant-..." value=${key}
+            onInput=${e=>setKey(e.target.value)}
+            onKeyDown=${e=>e.key==='Enter'&&test()}
+            style=${{width:'100%',background:'#07080d',border:'1px solid #151b25',color:'#ddd8cc',padding:'12px 14px',fontFamily:"'Spline Sans Mono',monospace",fontSize:14,outline:'none',marginBottom:8,borderRadius:2}}/>
+          ${err && html`<div style=${{fontSize:10,color:'#f05e5e88',marginBottom:10}}>⚠ ${err}</div>`}
+          <button onClick=${test} disabled=${busy||!key.trim()}
+            style=${{width:'100%',background:'#7eb8f7',color:'#07080d',border:'none',padding:13,fontFamily:"'Spline Sans Mono',monospace",fontSize:12,fontWeight:600,cursor:'pointer',letterSpacing:'1px',opacity:busy||!key.trim()?0.5:1,borderRadius:2}}>
+            ${busy ? 'TESTING CONNECTION...' : 'CONNECT & START'}
           </button>
-
-          {/* Add/Edit Sheet */}
-          {showAdd && (
-            <div className="sheet-overlay" onClick={cancelForm}>
-              <div className="sheet" onClick={e=>e.stopPropagation()}>
-                <div className="sheet-handle"/>
-                <div className="sheet-title">{editId ? "Edit Holding" : "Add Holding"}</div>
-
-                <div className="fg">
-                  <div className="fl">Asset Type</div>
-                  <select className="fi" value={form.type} onChange={e=>{setForm(f=>({...f,type:e.target.value,identifier:"",name:""}));setIsinLookup({loading:false,result:null,error:""});}}>
-                    {ASSET_TYPES.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </div>
-
-                <div className="fg">
-                  <div className="fl">{form.type==="etf_uk"?"ISIN":"Ticker / Symbol"}</div>
-                  <div className="lookup-row">
-                    <input className="fi" placeholder={identifierHint} value={form.identifier}
-                      onChange={e=>{setForm(f=>({...f,identifier:e.target.value.toUpperCase()}));if(form.type==="etf_uk")setIsinLookup({loading:false,result:null,error:"",});}}
-                      style={{flex:1}}/>
-                    {form.type==="etf_uk" && (
-                      <button className="btn-lookup" onClick={()=>lookupISIN(form.identifier)} disabled={isinLookup.loading||form.identifier.length<10}>
-                        {isinLookup.loading ? <span className="spin">↻</span> : "LOOK UP"}
-                      </button>
-                    )}
-                  </div>
-                  {form.type==="etf_uk"&&isinLookup.error&&<div style={{fontSize:10,color:"#f05e5e88",marginTop:4}}>⚠ {isinLookup.error}</div>}
-                  {form.type==="etf_uk"&&isinLookup.result&&(
-                    <div className="isin-result" style={{marginTop:8}}>
-                      <div style={{color:"#7eb8f7",fontWeight:600,fontSize:12}}>{isinLookup.result.name}</div>
-                      {isinLookup.result.provider&&<div style={{color:"#444",fontSize:10,marginTop:2}}>{isinLookup.result.provider}</div>}
-                      {isinLookup.result.description&&<div style={{color:"#333",fontSize:10,marginTop:4,lineHeight:1.5}}>{isinLookup.result.description}</div>}
-                      <div style={{color:"#5dde8a",fontSize:9,marginTop:6,letterSpacing:1}}>✓ AUTO-FILLED</div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="fg">
-                  <div className="fl">Name / Nickname (optional)</div>
-                  <input className="fi" placeholder="e.g. Vanguard Global" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
-                </div>
-
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                  <div className="fg">
-                    <div className="fl">Units / Shares</div>
-                    <input className="fi" type="number" inputMode="decimal" min="0" step="any" placeholder="e.g. 12.5" value={form.shares} onChange={e=>setForm(f=>({...f,shares:e.target.value}))}/>
-                  </div>
-                  <div className="fg">
-                    <div className="fl">Buy Price £</div>
-                    <input className="fi" type="number" inputMode="decimal" min="0" step="any" placeholder="e.g. 215.40" value={form.buyPrice} onChange={e=>setForm(f=>({...f,buyPrice:e.target.value}))}/>
-                  </div>
-                </div>
-
-                <button className="btn-full" onClick={addOrUpdate}>{editId?"UPDATE HOLDING":"ADD HOLDING"}</button>
-                <button className="btn-ghost" onClick={cancelForm}>CANCEL</button>
-              </div>
-            </div>
-          )}
-
-          {/* Delete Modal */}
-          {deleteConfirm && (
-            <div className="modal-overlay" onClick={()=>setDeleteConfirm(null)}>
-              <div className="modal" onClick={e=>e.stopPropagation()}>
-                <div className="modal-title">Remove Holding</div>
-                <div className="modal-sub">
-                  Remove <span style={{color:"#f05e5e"}}>{deleteConfirm.resolvedName||deleteConfirm.name||deleteConfirm.identifier}</span> from your portfolio? This cannot be undone.
-                </div>
-                <button className="btn-del" onClick={doDelete}>DELETE HOLDING</button>
-                <button className="btn-cancel" onClick={()=>setDeleteConfirm(null)}>CANCEL</button>
-              </div>
-            </div>
-          )}
-
-          {/* Settings Sheet */}
-          {showSettings && (
-            <div className="sheet-overlay" onClick={()=>setShowSettings(false)}>
-              <div className="sheet" onClick={e=>e.stopPropagation()}>
-                <div className="sheet-handle"/>
-                <div className="sheet-title">Settings</div>
-
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-label">API Key</div>
-                    <div className="settings-val">{apiKey ? apiKey.slice(0,12)+"..." : "Not set"}</div>
-                  </div>
-                  <button onClick={clearApiKey} style={{background:"transparent",border:"1px solid #f05e5e33",color:"#f05e5e77",padding:"7px 14px",fontFamily:"'Spline Sans Mono',monospace",fontSize:10,cursor:"pointer",letterSpacing:1}}>CHANGE</button>
-                </div>
-
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-label">Holdings</div>
-                    <div className="settings-val">{holdings.length} position{holdings.length!==1?"s":""} stored locally</div>
-                  </div>
-                </div>
-
-                <div className="settings-row" style={{borderBottom:"none"}}>
-                  <div>
-                    <div className="settings-label">Add to Home Screen</div>
-                    <div className="settings-val">Use "Share → Add to Home Screen" in Safari</div>
-                  </div>
-                </div>
-
-                <button className="btn-ghost" onClick={()=>setShowSettings(false)} style={{marginTop:20}}>CLOSE</button>
-              </div>
-            </div>
-          )}
+          <div style=${{fontSize:9,color:'#1e2430',marginTop:14,lineHeight:1.7}}>
+            Get a free key at console.anthropic.com · Never shared, stored locally only
+          </div>
         </div>
-      );
-    }
+      </div>`;
+  }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-  </script>
+  // ── Tooltip ────────────────────────────────────────────────────────────────
+  function CTip({ active, payload, label }) {
+    if (!active || !payload?.length) return null;
+    return html`
+      <div style=${{background:'#0d111c',border:'1px solid #1e2438',padding:'10px 14px',fontSize:10}}>
+        <div style=${{color:'#555',marginBottom:5,letterSpacing:1}}>${label}</div>
+        ${payload.map((p,i) => html`
+          <div key=${i} style=${{color:p.color,marginBottom:2}}>
+            <span style=${{marginRight:8}}>${p.name}</span>
+            <span style=${{color:'#ddd8cc'}}>${fmt(p.value)}</span>
+          </div>`)}
+      </div>`;
+  }
 
-  <!-- Service Worker for offline support -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      const swCode = `
-        const CACHE = 'wealthlens-v1';
-        const PRECACHE = [
-          'https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@300;400;500;600&family=Playfair+Display:wght@700;900&display=swap',
-          'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
-          'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
-          'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js',
-          'https://cdnjs.cloudflare.com/ajax/libs/recharts/2.8.0/Recharts.js',
-        ];
-        self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE).catch(()=>{}))); self.skipWaiting(); });
-        self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))); });
-        self.addEventListener('fetch', e => {
-          if(e.request.url.includes('api.anthropic.com')) return;
-          e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => { const clone = res.clone(); caches.open(CACHE).then(c=>c.put(e.request,clone)); return res; }).catch(()=>caches.match(e.request))));
-        });
-      `;
-      const blob = new Blob([swCode], {type:'text/javascript'});
-      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
-    }
-  </script>
+  // ── Main App ───────────────────────────────────────────────────────────────
+  function App() {
+    const [apiKey, setApiKey] = useState(() => ls(AK,''));
+    const [holdings, setHoldings] = useState(() => ls(SK,[]));
+    const [prices, setPrices] = useState({});
+    const [history, setHistory] = useState(() => ls(HK,{}));
+    const [loading, setLoading] = useState(false);
+    const [histLoading, setHistLoading] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState(null);
+    const [err, setErr] = useState('');
+    const [tab, setTab] = useState('all');
+    const [chartView, setChartView] = useState('portfolio');
+    const [showAdd, setShowAdd] = useState(false);
+    const [form, setForm] = useState({id:'',type:'stock',identifier:'',name:'',shares:'',buyPrice:''});
+    const [isinResult, setIsinResult] = useState(null);
+    const [isinLoading, setIsinLoading] = useState(false);
+    const [isinErr, setIsinErr] = useState('');
+    const [delTarget, setDelTarget] = useState(null);
+    const [showSettings, setShowSettings] = useState(false);
+
+    useEffect(() => { hideLoader(); }, []);
+    useEffect(() => { ss(SK, holdings); }, [holdings]);
+    useEffect(() => { ss(HK, history); }, [history]);
+
+    const saveKey = k => { ss(AK, k); setApiKey(k); };
+    const clearKey = () => { localStorage.removeItem(AK); setApiKey(''); };
+
+    const refreshPrices = useCallback(async (hs) => {
+      const h = hs ?? holdings;
+      if (!h.length) return;
+      setLoading(true); setErr('');
+      const assets = h.map(x=>`${x.identifier} (${x.type}${x.name?`, "${x.name}"`:''})`).join(', ');
+      try {
+        const txt = await claude(apiKey, PRICE_SYS, `GBP prices for: ${assets}`);
+        const np = JSON.parse(txt);
+        setPrices(np);
+        setLastUpdated(new Date());
+        loadHistory(h, np);
+      } catch(e) { setErr('Could not fetch prices: ' + e.message); }
+      setLoading(false);
+    }, [apiKey, holdings]);
+
+    const loadHistory = async (h, pd) => {
+      if (!h?.length) return;
+      setHistLoading(true);
+      const list = h.map(x=>{ const p=pd[x.identifier]?.price; return p?`${x.identifier} current £${p.toFixed(2)}`:x.identifier; }).join(', ');
+      try {
+        const txt = await claude(apiKey, HIST_SYS, `12-month history for: ${list}`, 2000);
+        setHistory(JSON.parse(txt));
+      } catch {}
+      setHistLoading(false);
+    };
+
+    useEffect(() => { if (holdings.length && apiKey) refreshPrices(holdings); }, []);
+
+    const lookupISIN = async (isin) => {
+      if (!isin || isin.length < 10) return;
+      setIsinLoading(true); setIsinResult(null); setIsinErr('');
+      try {
+        const txt = await claude(apiKey, ISIN_SYS, `Look up ISIN: ${isin}`, 300);
+        const r = JSON.parse(txt);
+        setIsinResult(r);
+        setForm(f => ({...f, name: r.shortName||r.name||'', type: r.type||'etf_uk'}));
+      } catch { setIsinErr('Could not look up ISIN. Enter name manually.'); }
+      setIsinLoading(false);
+    };
+
+    const saveHolding = () => {
+      if (!form.identifier || !form.shares || !form.buyPrice) return;
+      const entry = {
+        id: form.id || String(Date.now()),
+        identifier: form.identifier.trim().toUpperCase(),
+        type: form.type, name: form.name.trim(),
+        shares: parseFloat(form.shares), buyPrice: parseFloat(form.buyPrice)
+      };
+      const updated = form.id ? holdings.map(h=>h.id===form.id?entry:h) : [...holdings, entry];
+      setHoldings(updated);
+      closeSheet();
+      setTimeout(() => refreshPrices(updated), 200);
+    };
+
+    const closeSheet = () => { setShowAdd(false); setForm({id:'',type:'stock',identifier:'',name:'',shares:'',buyPrice:''}); setIsinResult(null); setIsinErr(''); setIsinLoading(false); };
+    const editHolding = h => { setForm({id:h.id,type:h.type,identifier:h.identifier,name:h.name||'',shares:String(h.shares),buyPrice:String(h.buyPrice)}); setShowAdd(true); };
+    const doDelete = () => { if(!delTarget) return; const u=holdings.filter(h=>h.id!==delTarget.id); setHoldings(u); setHistory(p=>{const n={...p};delete n[delTarget.identifier];return n;}); if(chartView===delTarget.id) setChartView('portfolio'); setDelTarget(null); };
+
+    // Enrich holdings with price data
+    const enriched = holdings.map(h => {
+      const pd = prices[h.identifier];
+      const currentPrice = pd?.price ?? null;
+      const resolvedName = pd?.name || h.name || h.identifier;
+      const costBasis = h.shares * h.buyPrice;
+      const currentValue = currentPrice !== null ? h.shares * currentPrice : null;
+      const gain = currentValue !== null ? currentValue - costBasis : null;
+      const gainPct = gain !== null && costBasis > 0 ? (gain/costBasis)*100 : null;
+      return {...h, currentPrice, resolvedName, costBasis, currentValue, gain, gainPct};
+    });
+
+    const filtered = tab==='all' ? enriched : enriched.filter(h=>h.type===tab);
+    const totCost = enriched.reduce((s,h)=>s+h.costBasis, 0);
+    const totVal = enriched.reduce((s,h)=>s+(h.currentValue??h.costBasis), 0);
+    const totGain = enriched.reduce((s,h)=>s+(h.gain??0), 0);
+    const totGainPct = totCost>0 ? (totGain/totCost)*100 : 0;
+    const winners = enriched.filter(h=>(h.gainPct??0)>=0).length;
+    const losers = enriched.filter(h=>(h.gainPct??0)<0).length;
+    const typeLabel = v => TYPES.find(t=>t.v===v)?.l || v;
+    const identifierHint = form.type==='etf_uk'?'ISIN e.g. GB00BQFH5Y69':form.type==='crypto'?'e.g. BTC, ETH':form.type==='etf_us'?'e.g. VOO, QQQ':'e.g. AAPL, TSLA';
+
+    // Chart
+    const chartData = MONTHS.map((m,i) => {
+      const pt = {month:m};
+      let tot = 0;
+      enriched.forEach(h => {
+        const hist = history[h.identifier];
+        const v = hist?.length>=12 ? h.shares*hist[i] : h.costBasis;
+        pt[h.identifier] = parseFloat(v.toFixed(2));
+        tot += v;
+      });
+      pt.Portfolio = parseFloat(tot.toFixed(2));
+      return pt;
+    });
+    const selH = chartView!=='portfolio' ? enriched.find(h=>h.id===chartView) : null;
+
+    if (!apiKey) return html`<${ApiKeyScreen} onSave=${saveKey}/>`;
+
+    return html`
+      <div style=${{minHeight:'100vh',background:'#07080d',paddingBottom:80}}>
+        <style>${`
+          .hdr{background:#07080d;border-bottom:1px solid #111620;padding:14px 18px;padding-top:calc(14px + env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;}
+          .brand{font-family:'Playfair Display',serif;font-size:20px;font-weight:900;letter-spacing:-.5px;}
+          .brand em{color:#7eb8f7;font-style:normal;}
+          .cards{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#0f1018;border-bottom:1px solid #0f1018;}
+          .card{background:#07080d;padding:16px;}
+          .card-full{grid-column:1/-1;}
+          .cl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#282e3a;margin-bottom:5px;}
+          .cv{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;letter-spacing:-1px;line-height:1;}
+          .cs{font-size:10px;margin-top:4px;color:#333;}
+          .pos{color:#5dde8a;}.neg{color:#f05e5e;}.blue{color:#7eb8f7;}
+          .chart-wrap{background:#0b0d15;border-bottom:1px solid #111620;padding:14px 6px 8px;}
+          .ctabs{display:flex;gap:2px;overflow-x:auto;padding:0 10px 8px;scrollbar-width:none;}
+          .ctabs::-webkit-scrollbar{display:none;}
+          .ctab{background:transparent;border:1px solid #111620;color:#333;padding:5px 10px;font-family:'Spline Sans Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:1px;white-space:nowrap;flex-shrink:0;transition:all .15s;}
+          .ctab.on{color:#ddd8cc;border-color:#1e2438;background:#151820;}
+          .sec{padding:14px 14px 0;}
+          .ftabs{display:flex;gap:2px;overflow-x:auto;margin-bottom:10px;scrollbar-width:none;}
+          .ftabs::-webkit-scrollbar{display:none;}
+          .ftab{background:transparent;border:1px solid #111620;color:#333;padding:5px 10px;font-family:'Spline Sans Mono',monospace;font-size:9px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;}
+          .ftab.on{background:#111620;color:#ddd8cc;border-color:#1e2438;}
+          .hcard{background:#0b0d15;border:1px solid #111620;border-left:3px solid;margin-bottom:8px;}
+          .hcard-top{padding:13px 13px 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+          .hcard-grid{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #111620;}
+          .hcell{padding:8px 12px;border-right:1px solid #111620;}
+          .hcell:last-child{border-right:none;}
+          .hcl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:#1e2430;margin-bottom:3px;}
+          .hcv{font-size:11px;color:#ddd8cc;}
+          .hacts{display:flex;border-top:1px solid #111620;}
+          .hact{flex:1;background:transparent;border:none;border-right:1px solid #111620;padding:9px;font-family:'Spline Sans Mono',monospace;font-size:9px;cursor:pointer;color:#333;letter-spacing:1px;transition:all .15s;}
+          .hact:last-child{border-right:none;}
+          .hact:hover{background:#111620;color:#888;}
+          .hact.del:hover{background:#f05e5e0d;color:#f05e5e;}
+          .bdg{display:inline-block;padding:2px 7px;font-size:8px;letter-spacing:1px;text-transform:uppercase;border:1px solid;}
+          .bdg-stock{color:#7eb8f7;border-color:#7eb8f725;background:#7eb8f70d;}
+          .bdg-etf_us{color:#b87ef7;border-color:#b87ef725;background:#b87ef70d;}
+          .bdg-etf_uk{color:#f7c97e;border-color:#f7c97e25;background:#f7c97e0d;}
+          .bdg-crypto{color:#7ef7c9;border-color:#7ef7c925;background:#7ef7c90d;}
+          .pil{display:inline-block;padding:2px 7px;font-size:10px;}
+          .pil-p{background:#5dde8a15;color:#5dde8a;border:1px solid #5dde8a28;}
+          .pil-n{background:#f05e5e15;color:#f05e5e;border:1px solid #f05e5e28;}
+          .fab{position:fixed;bottom:calc(22px + env(safe-area-inset-bottom));right:18px;width:54px;height:54px;border-radius:50%;background:#7eb8f7;color:#07080d;border:none;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px #7eb8f750;z-index:200;transition:all .2s;line-height:1;}
+          .fab.open{transform:rotate(45deg);background:#f05e5e;box-shadow:0 4px 20px #f05e5e40;}
+          .ov{position:fixed;inset:0;background:#000000aa;z-index:300;display:flex;align-items:flex-end;justify-content:center;}
+          .sheet{background:#0d111c;border-top:1px solid #1e2438;border-radius:20px 20px 0 0;padding:20px 18px;padding-bottom:calc(20px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;width:100%;max-width:560px;}
+          .handle{width:36px;height:3px;background:#1e2438;border-radius:2px;margin:0 auto 18px;}
+          .stitle{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:18px;}
+          .fg{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+          .fl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#282e3a;}
+          .fi{background:#07080d;border:1px solid #151b25;color:#ddd8cc;padding:12px 13px;font-family:'Spline Sans Mono',monospace;font-size:14px;outline:none;width:100%;border-radius:2px;transition:border-color .15s;}
+          .fi:focus{border-color:#7eb8f740;}
+          .fi::placeholder{color:#1e2430;}
+          select.fi{appearance:none;cursor:pointer;}
+          .btn-primary{width:100%;background:#7eb8f7;color:#07080d;border:none;padding:13px;font-family:'Spline Sans Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:1px;margin-top:4px;border-radius:2px;}
+          .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+          .btn-ghost{width:100%;background:transparent;border:1px solid #1e2438;color:#555;padding:11px;font-family:'Spline Sans Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px;margin-top:8px;border-radius:2px;}
+          .btn-del{width:100%;background:#f05e5e;color:#fff;border:none;padding:13px;font-family:'Spline Sans Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:1px;border-radius:2px;}
+          .lookup-row{display:flex;gap:8px;}
+          .btn-lookup{background:#1e2438;border:1px solid #2a3050;color:#7eb8f7;padding:0 14px;font-family:'Spline Sans Mono',monospace;font-size:9px;font-weight:600;cursor:pointer;letter-spacing:1px;flex-shrink:0;border-radius:2px;transition:all .15s;}
+          .btn-lookup:disabled{opacity:.35;cursor:not-allowed;}
+          .isin-box{margin-top:8px;background:#07080d;border:1px solid #1e2438;border-left:2px solid #7eb8f7;padding:10px 13px;}
+          .spin{animation:sp 1s linear infinite;display:inline-block;}
+          @keyframes sp{to{transform:rotate(360deg)}}
+          .err-bar{background:#f05e5e0a;border:1px solid #f05e5e20;color:#f05e5e77;padding:9px 14px;font-size:10px;margin:0 14px 10px;letter-spacing:.5px;}
+          .empty{text-align:center;padding:60px 20px;}
+          .empty-h{font-family:'Playfair Display',serif;font-size:20px;color:#1a1f2a;margin-bottom:6px;}
+          .ibtn{background:transparent;border:1px solid #151b25;color:#444;padding:7px 12px;font-family:'Spline Sans Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-radius:2px;}
+          .ibtn:hover:not(:disabled){color:#888;border-color:#2a3040;}
+          .ibtn:disabled{opacity:.3;cursor:not-allowed;}
+          .ts{font-size:8px;color:#1e2430;letter-spacing:1px;}
+        `}</style>
+
+        <!-- Header -->
+        <div class="hdr">
+          <div>
+            <div class="brand">WEALTH<em>LENS</em></div>
+            ${lastUpdated ? html`<div class="ts">Updated ${lastUpdated.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>` : null}
+          </div>
+          <div style=${{display:'flex',gap:8}}>
+            <button class="ibtn" onClick=${()=>refreshPrices()} disabled=${loading||!holdings.length}>
+              ${loading ? html`<span class="spin">↻</span>` : '↻'}
+            </button>
+            <button class="ibtn" onClick=${()=>setShowSettings(true)}>⚙</button>
+          </div>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="cards">
+          <div class="card card-full">
+            <div class="cl">Portfolio Value</div>
+            <div class="cv blue">${fmt(totVal)}</div>
+            <div class="cs">${holdings.length} position${holdings.length!==1?'s':''}</div>
+          </div>
+          <div class="card">
+            <div class="cl">Invested</div>
+            <div class="cv" style=${{fontSize:18}}>${fmtS(totCost)}</div>
+            <div class="cs">cost basis</div>
+          </div>
+          <div class="card">
+            <div class="cl">Total Return</div>
+            <div class="cv ${totGain>=0?'pos':'neg'}" style=${{fontSize:18}}>${totGain>=0?'+':''}${fmtS(totGain)}</div>
+            <div class="cs ${totGainPct>=0?'pos':'neg'}">${fmtP(totGainPct)}</div>
+          </div>
+          <div class="card">
+            <div class="cl">Up</div>
+            <div class="cv pos" style=${{fontSize:20}}>${winners}</div>
+            <div class="cs">positions</div>
+          </div>
+          <div class="card">
+            <div class="cl">Down</div>
+            <div class="cv neg" style=${{fontSize:20}}>${losers}</div>
+            <div class="cs">positions</div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        ${holdings.length>0 ? html`
+          <div class="chart-wrap">
+            <div style=${{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0 10px',marginBottom:8}}>
+              <div style=${{fontSize:8,letterSpacing:'2px',textTransform:'uppercase',color:'#282e3a'}}>
+                ${histLoading ? html`<span class="spin" style=${{marginRight:6}}>↻</span>Loading chart...` : '12-MONTH PERFORMANCE'}
+              </div>
+            </div>
+            <div class="ctabs">
+              <button class="ctab ${chartView==='portfolio'?'on':''}" onClick=${()=>setChartView('portfolio')}>PORTFOLIO</button>
+              ${enriched.map((h,i) => html`
+                <button key=${h.id} class="ctab ${chartView===h.id?'on':''}"
+                  style=${chartView===h.id?{borderColor:PALETTE[i%PALETTE.length]+'66',color:PALETTE[i%PALETTE.length]}:{}}
+                  onClick=${()=>setChartView(h.id)}>${h.identifier}</button>`)}
+            </div>
+            ${chartData.length>0 ? html`
+              <${ResponsiveContainer} width="100%" height=${200}>
+                ${chartView==='portfolio' ? html`
+                  <${LineChart} data=${chartData} margin=${{top:4,right:8,left:0,bottom:4}}>
+                    <${XAxis} dataKey="month" tick=${{fill:'#282e3a',fontSize:9}} axisLine=${false} tickLine=${false}/>
+                    <${YAxis} tick=${{fill:'#282e3a',fontSize:9}} axisLine=${false} tickLine=${false} tickFormatter=${v=>`£${(v/1000).toFixed(0)}k`} width=${38}/>
+                    <${Tooltip} content=${CTip}/>
+                    ${enriched.map((h,i) => html`<${Line} key=${h.identifier} type="monotone" dataKey=${h.identifier} name=${h.resolvedName} stroke=${PALETTE[i%PALETTE.length]} strokeWidth=${1.5} dot=${false} strokeOpacity=${0.5}/>`)}
+                    <${Line} type="monotone" dataKey="Portfolio" name="Total" stroke="#7eb8f7" strokeWidth=${2.5} dot=${false}/>
+                  </${LineChart}>` : selH ? html`
+                  <${LineChart} data=${chartData} margin=${{top:4,right:8,left:0,bottom:4}}>
+                    <${XAxis} dataKey="month" tick=${{fill:'#282e3a',fontSize:9}} axisLine=${false} tickLine=${false}/>
+                    <${YAxis} tick=${{fill:'#282e3a',fontSize:9}} axisLine=${false} tickLine=${false} tickFormatter=${v=>fmtS(v)} width=${52}/>
+                    <${Tooltip} content=${CTip}/>
+                    <${ReferenceLine} y=${selH.costBasis} stroke="#f7c97e" strokeDasharray="4 4" strokeOpacity=${0.4}/>
+                    <${Line} type="monotone" dataKey=${selH.identifier} name=${selH.resolvedName} stroke=${PALETTE[enriched.findIndex(h=>h.id===selH.id)%PALETTE.length]} strokeWidth=${2} dot=${false}/>
+                  </${LineChart}>` : null}
+              </${ResponsiveContainer}>` : html`
+              <div style=${{height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'#1e2430',fontSize:10,letterSpacing:1}}>
+                REFRESH PRICES TO LOAD CHART
+              </div>`}
+          </div>` : null}
+
+        <!-- Holdings -->
+        <div class="sec">
+          ${err ? html`<div class="err-bar" style=${{margin:'0 0 10px'}}>⚠ ${err}</div>` : null}
+
+          <div class="ftabs">
+            ${[{v:'all',l:'All'},{v:'stock',l:'Stocks'},{v:'etf_us',l:'US ETFs'},{v:'etf_uk',l:'UK Funds'},{v:'crypto',l:'Crypto'}].map(t => html`
+              <button key=${t.v} class="ftab ${tab===t.v?'on':''}" onClick=${()=>setTab(t.v)}>${t.l}</button>`)}
+          </div>
+
+          ${holdings.length===0 ? html`
+            <div class="empty">
+              <div class="empty-h">No holdings yet</div>
+              <div style=${{fontSize:10,letterSpacing:1,color:'#1e2430'}}>TAP + TO ADD YOUR FIRST POSITION</div>
+            </div>` : filtered.length===0 ? html`
+            <div class="empty">
+              <div style=${{fontSize:10,letterSpacing:1,color:'#1e2430'}}>NO ${tab.toUpperCase()} HOLDINGS</div>
+            </div>` : filtered.map((h,i) => {
+              const color = PALETTE[enriched.findIndex(e=>e.id===h.id)%PALETTE.length];
+              const weight = totVal>0 ? ((h.currentValue??h.costBasis)/totVal)*100 : 0;
+              return html`
+                <div key=${h.id} class="hcard" style=${{borderLeftColor:color}}>
+                  <div class="hcard-top">
+                    <div style=${{flex:1,minWidth:0}}>
+                      <div style=${{display:'flex',alignItems:'center',gap:7,marginBottom:5,flexWrap:'wrap'}}>
+                        <span class="bdg bdg-${h.type}">${typeLabel(h.type)}</span>
+                        <span style=${{fontSize:8,color:'#282e3a',letterSpacing:1}}>${weight.toFixed(1)}%</span>
+                      </div>
+                      <div style=${{fontWeight:500,color:'#e8e4d9',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${h.resolvedName}</div>
+                      ${h.resolvedName!==h.identifier ? html`<div style=${{fontSize:9,color:'#282e3a',marginTop:2,letterSpacing:.5}}>${h.identifier}</div>` : null}
+                    </div>
+                    <div style=${{textAlign:'right',flexShrink:0}}>
+                      <div style=${{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:h.currentValue!==null?'#ddd8cc':'#333'}}>
+                        ${fmtS(h.currentValue??h.costBasis)}
+                      </div>
+                      <div style=${{marginTop:3}}>
+                        ${h.gainPct!==null ? html`<span class="pil ${h.gainPct>=0?'pil-p':'pil-n'}">${fmtP(h.gainPct)}</span>` : html`<span style=${{fontSize:9,color:'#282e3a'}}>no price yet</span>`}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="hcard-grid">
+                    <div class="hcell"><div class="hcl">Units</div><div class="hcv">${fmtN(h.shares)}</div></div>
+                    <div class="hcell"><div class="hcl">Buy Price</div><div class="hcv">${fmt(h.buyPrice)}</div></div>
+                    <div class="hcell"><div class="hcl">P&L</div><div class="hcv ${(h.gain??0)>=0?'pos':'neg'}">${h.gain!==null?`${h.gain>=0?'+':''}${fmtS(h.gain)}`:'—'}</div></div>
+                  </div>
+                  <div class="hacts">
+                    <button class="hact" onClick=${()=>{setChartView(h.id);window.scrollTo({top:0,behavior:'smooth'});}}>chart</button>
+                    <button class="hact" onClick=${()=>editHolding(h)}>edit</button>
+                    <button class="hact del" onClick=${()=>setDelTarget(h)}>delete</button>
+                  </div>
+                </div>`;
+            })}
+        </div>
+
+        ${holdings.length>0 ? html`
+          <div style=${{padding:'16px 14px 0',fontSize:9,color:'#1a1f2a',lineHeight:1.7}}>
+            Prices &amp; chart history are AI-estimated. Chart is simulated, not actual past performance. For personal tracking only — not financial advice.
+          </div>` : null}
+
+        <!-- FAB -->
+        <button class="fab ${showAdd?'open':''}" onClick=${()=>showAdd?closeSheet():setShowAdd(true)}>+</button>
+
+        <!-- Add/Edit Sheet -->
+        ${showAdd ? html`
+          <div class="ov" onClick=${closeSheet}>
+            <div class="sheet" onClick=${e=>e.stopPropagation()}>
+              <div class="handle"></div>
+              <div class="stitle">${form.id ? 'Edit Holding' : 'Add Holding'}</div>
+
+              <div class="fg">
+                <div class="fl">Asset Type</div>
+                <select class="fi" value=${form.type}
+                  onChange=${e=>{setForm(f=>({...f,type:e.target.value,identifier:'',name:''}));setIsinResult(null);setIsinErr('');}}>
+                  ${TYPES.map(t => html`<option key=${t.v} value=${t.v}>${t.l}</option>`)}
+                </select>
+              </div>
+
+              <div class="fg">
+                <div class="fl">${form.type==='etf_uk'?'ISIN':'Ticker / Symbol'}</div>
+                <div class="lookup-row">
+                  <input class="fi" style=${{flex:1}} placeholder=${identifierHint} value=${form.identifier}
+                    onInput=${e=>{setForm(f=>({...f,identifier:e.target.value.toUpperCase()}));setIsinResult(null);setIsinErr('');}}/>
+                  ${form.type==='etf_uk' ? html`
+                    <button class="btn-lookup" onClick=${()=>lookupISIN(form.identifier)} disabled=${isinLoading||form.identifier.length<10}>
+                      ${isinLoading ? html`<span class="spin">↻</span>` : 'LOOK UP'}
+                    </button>` : null}
+                </div>
+                ${form.type==='etf_uk'&&isinErr ? html`<div style=${{fontSize:10,color:'#f05e5e88',marginTop:4}}>⚠ ${isinErr}</div>` : null}
+                ${form.type==='etf_uk'&&isinResult ? html`
+                  <div class="isin-box">
+                    <div style=${{color:'#7eb8f7',fontWeight:600,fontSize:12}}>${isinResult.name}</div>
+                    ${isinResult.provider ? html`<div style=${{color:'#444',fontSize:10,marginTop:2}}>${isinResult.provider}</div>` : null}
+                    ${isinResult.description ? html`<div style=${{color:'#333',fontSize:10,marginTop:4,lineHeight:1.5}}>${isinResult.description}</div>` : null}
+                    <div style=${{color:'#5dde8a',fontSize:9,marginTop:6,letterSpacing:1}}>✓ AUTO-FILLED</div>
+                  </div>` : null}
+              </div>
+
+              <div class="fg">
+                <div class="fl">Name / Nickname (optional)</div>
+                <input class="fi" placeholder="e.g. Vanguard Global" value=${form.name}
+                  onInput=${e=>setForm(f=>({...f,name:e.target.value}))}/>
+              </div>
+
+              <div style=${{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div class="fg">
+                  <div class="fl">Units / Shares</div>
+                  <input class="fi" type="number" inputMode="decimal" min="0" step="any" placeholder="e.g. 10"
+                    value=${form.shares} onInput=${e=>setForm(f=>({...f,shares:e.target.value}))}/>
+                </div>
+                <div class="fg">
+                  <div class="fl">Buy Price £</div>
+                  <input class="fi" type="number" inputMode="decimal" min="0" step="any" placeholder="e.g. 215.40"
+                    value=${form.buyPrice} onInput=${e=>setForm(f=>({...f,buyPrice:e.target.value}))}/>
+                </div>
+              </div>
+
+              <button class="btn-primary" onClick=${saveHolding}
+                disabled=${!form.identifier||!form.shares||!form.buyPrice}>
+                ${form.id ? 'UPDATE HOLDING' : 'ADD HOLDING'}
+              </button>
+              <button class="btn-ghost" onClick=${closeSheet}>CANCEL</button>
+            </div>
+          </div>` : null}
+
+        <!-- Delete modal -->
+        ${delTarget ? html`
+          <div class="ov" onClick=${()=>setDelTarget(null)}>
+            <div class="sheet" style=${{maxHeight:'auto'}} onClick=${e=>e.stopPropagation()}>
+              <div class="handle"></div>
+              <div class="stitle">Remove Holding</div>
+              <div style=${{fontSize:12,color:'#444',lineHeight:1.7,marginBottom:20}}>
+                Remove <span style=${{color:'#f05e5e'}}>${delTarget.resolvedName||delTarget.name||delTarget.identifier}</span> from your portfolio? This cannot be undone.
+              </div>
+              <button class="btn-del" onClick=${doDelete}>DELETE HOLDING</button>
+              <button class="btn-ghost" onClick=${()=>setDelTarget(null)}>CANCEL</button>
+            </div>
+          </div>` : null}
+
+        <!-- Settings -->
+        ${showSettings ? html`
+          <div class="ov" onClick=${()=>setShowSettings(false)}>
+            <div class="sheet" onClick=${e=>e.stopPropagation()}>
+              <div class="handle"></div>
+              <div class="stitle">Settings</div>
+              <div style=${{borderBottom:'1px solid #111620',paddingBottom:16,marginBottom:16}}>
+                <div style=${{fontSize:12,color:'#888',marginBottom:4}}>API Key</div>
+                <div style=${{fontSize:10,color:'#333',marginBottom:12}}>${apiKey.slice(0,16)}•••</div>
+                <button onClick=${clearKey} style=${{background:'transparent',border:'1px solid #f05e5e33',color:'#f05e5e77',padding:'8px 16px',fontFamily:"'Spline Sans Mono',monospace",fontSize:10,cursor:'pointer',letterSpacing:1,borderRadius:2}}>
+                  CHANGE KEY
+                </button>
+              </div>
+              <div style=${{borderBottom:'1px solid #111620',paddingBottom:16,marginBottom:16}}>
+                <div style=${{fontSize:12,color:'#888',marginBottom:4}}>Holdings</div>
+                <div style=${{fontSize:10,color:'#333'}}>${holdings.length} position${holdings.length!==1?'s':''} stored on device</div>
+              </div>
+              <div style=${{paddingBottom:16,marginBottom:16}}>
+                <div style=${{fontSize:12,color:'#888',marginBottom:4}}>Install as App</div>
+                <div style=${{fontSize:10,color:'#333',lineHeight:1.7}}>iPhone: Safari → Share → Add to Home Screen${'\n'}Android: Chrome → menu → Add to Home Screen</div>
+              </div>
+              <button class="btn-ghost" onClick=${()=>setShowSettings(false)}>CLOSE</button>
+            </div>
+          </div>` : null}
+      </div>`;
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+}
+</script>
 </body>
 </html>
